@@ -1,6 +1,6 @@
 # transcription.py
 from huggingface_hub import InferenceClient
-from hf_utils import get_hf_token
+from .hf_utils import get_hf_token
 
 client = InferenceClient(api_key=get_hf_token())
 
