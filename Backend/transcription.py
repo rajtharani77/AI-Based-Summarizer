@@ -1,4 +1,3 @@
-# Backend/transcription.py
 import time
 import requests
 from .hf_utils import get_hf_token, get_together_token
@@ -10,7 +9,6 @@ def transcribe_audio(file_path: str, max_retries: int = 3) -> str:
       - Otherwise fall back to HF's public wav2vec2 ASR endpoint.
     Retries on 503 (model loading) up to max_retries.
     """
-    # Attempt Together AI transcription
     try:
         tog_token = get_together_token()
         api_url = "https://api.together.xyz/v1/audio/transcriptions"
@@ -33,10 +31,7 @@ def transcribe_audio(file_path: str, max_retries: int = 3) -> str:
             return resp.text.strip()
 
     except RuntimeError:
-        # Together key missing or transcription failed → fallback
         pass
-
-    # Fallback: Hugging Face Wav2Vec2 ASR
     hf_token = get_hf_token()  # this will raise if HF token is missing
     api_url = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
     headers = {
