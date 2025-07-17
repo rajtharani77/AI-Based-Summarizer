@@ -1,15 +1,16 @@
-# Streamlit UI
-streamlit==1.32.2
+ # requirements.txt
 
-# Transformers & ASR
-transformers>=4.30.0
-torch>=2.0.0
-torchaudio>=2.0.0
-soundfile>=0.12.1
+ streamlit==1.32.2
 
-# HF Inference via requests
-requests>=2.31.0
+# Hugging Face transformers for pipeline ASR
+ transformers>=4.34.0
+ torch>=2.0.0
+ torchaudio>=2.0.0
+ soundfile>=0.12.1
 
-# (Optional) FastAPI if still used
-fastapi==0.110.0
-uvicorn==0.29.0
+ # HF Inference via requests
+ requests>=2.31.0
+
+ # (Optional) FastAPI if you still use it
+ fastapi==0.110.0
+ uvicorn==0.29.0
