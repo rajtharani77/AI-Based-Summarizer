@@ -1,16 +1,21 @@
-import time
+# Backend/extraction.py
 import json
+import time
 import logging
 import requests
-from typing import Dict, Any
+from typing import Any, Dict
+import streamlit as st
 from .hf_utils import get_together_token, get_hf_token
 
 logger = logging.getLogger(__name__)
 
-TOGETHER_MODEL = "togethercomputer/RedPajama-INCITE-7B-Instruct-v1"
-TOGETHER_URL = f"https://api.together.xyz/v1/models/{TOGETHER_MODEL}/generate"
+# Load endpoints
+together_url = os.getenv("TOGETHER_URL") or st.secrets.get("TOGETHER_URL")
+hf_url       = os.getenv("HF_URL")       or st.secrets.get("HF_URL")
 
-HF_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+# Healthchecks (reuse if desired)
+_healthcheck("Together Extractor", together_url, get_together_token, "TOGETHER_API_KEY")
+_healthcheck("HF Extractor",       hf_url,       get_hf_token,       "HUGGINGFACE_API_TOKEN")
 
 def extract_crm_structured(summary: str, max_retries: int = 3) -> Dict[str, Any]:
     """
@@ -34,70 +39,60 @@ def extract_crm_structured(summary: str, max_retries: int = 3) -> Dict[str, Any]
         f"Meeting Summary:\n{summary}"
     )
 
-    payload = {
+    tog_payload = {
+        "model": "togethercomputer/RedPajama-INCITE-7B-Instruct-v1",
         "prompt": prompt,
-        "max_new_tokens": 512,
-        "temperature": 0.0,
-        "do_sample": False
+        "maxTokens": 512,
+        "temperature": 0.0
     }
 
     # 1) Together
     try:
-        tog_token = get_together_token()
-        headers = {
-            "Authorization": f"Bearer {tog_token}",
-            "Content-Type": "application/json"
-        }
+        token = get_together_token()
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         backoff = 1
-        for attempt in range(1, max_retries + 1):
-            resp = requests.post(TOGETHER_URL, headers=headers, json=payload, timeout=120)
+        for _ in range(max_retries):
+            resp = requests.post(together_url, headers=headers, json=tog_payload, timeout=120)
             if resp.status_code == 503:
-                logger.warning(f"Together busy (extract), retry in {backoff}s…")
+                logger.warning(f"[Together] extract busy, retry in {backoff}s...")
                 time.sleep(backoff)
                 backoff *= 2
                 continue
-            resp.raise_for_status()
+            if resp.status_code != 200:
+                logger.error(f"[Together] extract {resp.status_code}: {resp.text}")
+                break
             text = resp.json()["choices"][0]["text"].strip()
             start, end = text.find("{"), text.rfind("}") + 1
             return json.loads(text[start:end])
-    except Exception as e:
-        logger.warning(f"Together extraction failed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("[Together] extraction error")
 
     # 2) HF fallback
+    hf_payload = {"inputs": prompt, "parameters": {"max_new_tokens": 512, "temperature": 0.0}}
     try:
-        hf_token = get_hf_token()
-        headers = {
-            "Authorization": f"Bearer {hf_token}",
-            "Content-Type": "application/json"
-        }
-        hf_payload = {
-            "inputs": prompt,
-            "parameters": {"max_new_tokens": 512, "temperature": 0.0, "do_sample": False}
-        }
+        token = get_hf_token()
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         backoff = 1
-        for attempt in range(1, max_retries + 1):
-            resp = requests.post(HF_URL, headers=headers, json=hf_payload, timeout=120)
+        for _ in range(max_retries):
+            resp = requests.post(hf_url, headers=headers, json=hf_payload, timeout=120)
             if resp.status_code == 503:
-                logger.warning(f"HF busy (extract), retry in {backoff}s…")
+                logger.warning(f"[HF] extract busy, retry in {backoff}s...")
                 time.sleep(backoff)
                 backoff *= 2
                 continue
-            resp.raise_for_status()
+            if resp.status_code != 200:
+                logger.error(f"[HF] extract {resp.status_code}: {resp.text}")
+                break
             text = resp.json()[0]["generated_text"].strip()
             start, end = text.find("{"), text.rfind("}") + 1
             return json.loads(text[start:end])
-    except Exception as e:
-        logger.error(f"Hugging Face extraction failed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("[HF] extraction error")
 
-    # Last resort: return empty schema with the raw summary
+    # Last resort: return a minimal parse-error schema
     return {
         "account": {"Name": "ParseError"},
         "contacts": [],
-        "meeting": {
-            "Summary": summary,
-            "PainPoints": [],
-            "Objections": [],
-            "Resolutions": []
-        },
+        "meeting": {"Summary": summary, "PainPoints": [], "Objections": [], "Resolutions": []},
         "actionItems": []
     }
