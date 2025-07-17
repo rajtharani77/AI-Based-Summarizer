@@ -1,13 +1,15 @@
+# Streamlit UI
 streamlit==1.32.2
 
-# AssemblyAI for transcription
+# Transformers & ASR
+transformers>=4.30.0
+torch>=2.0.0
+torchaudio>=2.0.0
+soundfile>=0.12.1
+
+# HF Inference via requests
 requests>=2.31.0
 
-# Whisper removed entirely—no ffmpeg binary needed.
-
-# HF Inference (requests-based)
-requests>=2.31.0
-
-# (Optional) FastAPI if you still use it
+# (Optional) FastAPI if still used
 fastapi==0.110.0
 uvicorn==0.29.0
