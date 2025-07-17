@@ -1,40 +1,53 @@
 import requests
 import logging
-import librosa
-import soundfile as sf
-import tempfile
-import os
+import base64
+import json
 
 logger = logging.getLogger(__name__)
 
 def transcribe_audio(file_path: str, api_token: str):
+    # CORRECT WHISPER API ENDPOINT
     API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
-    headers = {"Authorization": f"Bearer {api_token}"}
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json"
+    }
     
     try:
-        # Convert audio to Whisper-compatible format (16kHz mono)
-        converted_path = convert_audio(file_path)
+        # Read and encode audio in base64
+        with open(file_path, "rb") as audio_file:
+            audio_bytes = audio_file.read()
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
         
-        with open(converted_path, "rb") as f:
-            files = {"file": f}
-            response = requests.post(API_URL, headers=headers, files=files, timeout=300)
+        # Create Whisper-compatible payload
+        payload = {
+            "inputs": audio_base64,
+            "parameters": {
+                "return_timestamps": False
+            }
+        }
+        
+        # Send request
+        response = requests.post(
+            API_URL, 
+            headers=headers, 
+            json=payload, 
+            timeout=120
+        )
+        
+        # Handle model loading
+        if response.status_code == 503:
+            wait_time = 30
+            logger.info(f"Model loading, waiting {wait_time} seconds...")
+            time.sleep(wait_time)
+            return transcribe_audio(file_path, api_token)  # Retry
         
         response.raise_for_status()
-        return response.json().get("text", "")
+        
+        # Parse response
+        result = response.json()
+        return result.get("text", "")
     
     except Exception as e:
-        logger.error(f"Transcription error: {str(e)}")
+        logger.error(f"Transcription error: {response.text if 'response' in locals() else str(e)}")
         raise RuntimeError("Transcription service unavailable") from e
-    finally:
-        if converted_path and os.path.exists(converted_path):
-            os.remove(converted_path)
-
-def convert_audio(input_path: str) -> str:
-    """Convert audio to 16kHz mono WAV format"""
-    # Load audio with librosa (resample to 16kHz, convert to mono)
-    y, sr = librosa.load(input_path, sr=16000, mono=True)
-    
-    # Save as temp WAV file
-    temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-    sf.write(temp_file.name, y, sr, subtype='PCM_16')
-    return temp_file.name
