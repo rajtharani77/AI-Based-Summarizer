@@ -1,53 +1,73 @@
-# Backend/extraction.py
-import json
+import time
 import logging
-from transformers import pipeline
+import json
+import requests
+from .hf_utils import get_together_token
 
 logger = logging.getLogger(__name__)
 
-# Local extraction pipeline using flan-t5-small
-_extractor = pipeline(
-    task="text2text-generation",
-    model="google/flan-t5-small"
-)
+TOGETHER_CHAT_URL = "https://api.together.ai/v1/chat/completions"
+MODEL             = "togethercomputer/RedPajama-INCITE-7B-Instruct-v1"
 
-# CRM schema template
-_CRM_SCHEMA = {
-    "account": {"Name": ""},
-    "contacts": [{"FullName": "", "Role": "", "Email": ""}],
-    "meeting": {
-        "Summary": "",
-        "PainPoints": ["", ""],
-        "Objections": ["", ""],
-        "Resolutions": ["", ""]
-    },
-    "actionItems": [{"Description": "", "DueDate": "", "AssignedTo": ""}]
+CRM_SCHEMA = {
+  "account": {"Name": ""},
+  "contacts": [{"FullName": "", "Role": "", "Email": ""}],
+  "meeting": {
+    "Summary": "",
+    "PainPoints": ["", ""],
+    "Objections": ["", ""],
+    "Resolutions": ["", ""]
+  },
+  "actionItems": [{"Description": "", "DueDate": "", "AssignedTo": ""}]
 }
 
-def extract_crm_structured(summary: str) -> dict:
+def extract_crm_structured(summary: str, max_retries: int = 3) -> dict:
     """
-    Generate CRM JSON from meeting summary using a local text2text pipeline.
+    Given a concise summary, call Together chat to map it
+    into the exact CRM_SCHEMA JSON shape.
     """
+    headers = {
+        "Authorization": f"Bearer {get_together_token()}",
+        "Content-Type":  "application/json"
+    }
+
+    schema_str = json.dumps(CRM_SCHEMA, indent=2)
     prompt = (
-        "Convert the meeting summary below into JSON exactly matching this schema (no extra keys):\n"
-        f"{json.dumps(_CRM_SCHEMA, indent=2)}\n\n"
-        f"Meeting Summary:\n{summary}"
+        f"Convert the following meeting summary into JSON exactly matching this schema "
+        f"(no extra keys, preserve array lengths):\n\n"
+        f"{schema_str}\n\nMeeting Summary:\n{summary}"
     )
-    try:
-        # Generate raw text
-        outputs = _extractor(prompt, max_length=512)
-        text = outputs[0].get("generated_text", "").strip()
-        # Find JSON substring
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        json_str = text[start:end]
-        return json.loads(json_str)
-    except Exception as e:
-        logger.error(f"Local extraction exception: {e}")
-        # Fallback: minimal schema with summary included
-        return {
-            "account": {"Name": "ParseError"},
-            "contacts": [],
-            "meeting": {"Summary": summary, "PainPoints": [], "Objections": [], "Resolutions": []},
-            "actionItems": []
-        }
+
+    messages = [
+        {"role": "system", "content":
+         "You are a JSON generator. Always output valid JSON with no commentary."},
+        {"role": "user", "content": prompt}
+    ]
+
+    payload = {
+        "model":     MODEL,
+        "messages":  messages,
+        "max_tokens": 512,
+        "temperature": 0.0,
+        "stream":     False
+    }
+
+    backoff = 1
+    for attempt in range(max_retries):
+        resp = requests.post(TOGETHER_CHAT_URL, headers=headers, json=payload, timeout=120)
+        if resp.status_code == 503:
+            logger.warning(f"[Together] Extractor busy, retry in {backoff}s")
+            time.sleep(backoff); backoff *= 2; continue
+        resp.raise_for_status()
+        jtext = resp.json()["choices"][0]["message"]["content"].strip()
+
+        # Extract JSON block
+        start = jtext.find("{")
+        end   = jtext.rfind("}") + 1
+        try:
+            return json.loads(jtext[start:end])
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse failed: {e}\nRaw output:\n{jtext}")
+            raise
+
+    raise RuntimeError("CRM extraction via Together failed after retries")
