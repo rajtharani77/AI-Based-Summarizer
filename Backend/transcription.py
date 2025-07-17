@@ -1,7 +1,7 @@
 # Backend/transcription.py
 import time
 import requests
-from .api_utils import get_assemblyai_token
+from .hf_utils import get_assemblyai_token
 
 UPLOAD_URL    = "https://api.assemblyai.com/v2/upload"
 TRANSCRIPT_URL = "https://api.assemblyai.com/v2/transcript"
