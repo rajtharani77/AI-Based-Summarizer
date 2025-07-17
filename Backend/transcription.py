@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def transcribe_audio(file_path: str, api_token: str):
-    API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large"
+    API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
     headers = {"Authorization": f"Bearer {api_token}"}
     
     try:
