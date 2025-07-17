@@ -1,27 +1,14 @@
 import requests
 import json
-import streamlit as st
+import logging
 from typing import Dict, Any
-from dotenv import load_dotenv
-import os
-def extract_crm_structured(summary: str) -> Dict[str, Any]:
-    """
-    Extracts structured CRM data from meeting summary using LLM
-    
-    Args:
-        summary: Text summary of the meeting
-        
-    Returns:
-        Dictionary containing structured CRM data
-    """
+
+logger = logging.getLogger(__name__)
+
+def extract_crm_structured(summary: str, api_token: str) -> Dict[str, Any]:
     API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
-    # Add to top of extraction.py/summarization.py/transcription.py
-
-
-load_dotenv()  # Load environment variables
-
-API_TOKEN = os.getenv("HF_API_TOKEN")  # Instead of st.secrets
-
+    headers = {"Authorization": f"Bearer {api_token}"}
+    
     prompt = f"""Convert this meeting summary into structured JSON format:
 
 Required JSON structure:
@@ -54,31 +41,24 @@ Output MUST follow these rules:
             API_URL,
             headers=headers,
             json={"inputs": prompt},
-            timeout=30  # Add timeout
+            timeout=90
         )
         response.raise_for_status()
         
-        # Handle API response
         output = response.json()[0]["generated_text"].strip()
-        
-        # Clean output to extract just the JSON
         json_start = output.find('{')
         json_end = output.rfind('}') + 1
         json_str = output[json_start:json_end]
         
         return json.loads(json_str)
         
-    except requests.exceptions.RequestException as e:
-        st.error(f"API request failed: {str(e)}")
-        return create_fallback_response(summary)
-    except (json.JSONDecodeError, KeyError) as e:
-        st.error(f"Failed to parse API response: {str(e)}")
+    except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError) as e:
+        logger.error(f"CRM extraction error: {str(e)}")
         return create_fallback_response(summary)
 
 def create_fallback_response(summary: str) -> Dict[str, Any]:
-    """Creates a fallback response when parsing fails"""
     return {
-        "account": {"Name": "ParseError"},
+        "account": {"Name": "Error"},
         "contacts": [],
         "meeting": {
             "Summary": summary,
