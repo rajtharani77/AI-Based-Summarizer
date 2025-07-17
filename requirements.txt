@@ -1,5 +1,17 @@
+# Core
 streamlit==1.32.2
-fastapi==0.110.0
-uvicorn==0.29.0
 python-dotenv==1.0.0
 requests==2.31.0
+
+# AI/ML
+torch==2.2.1
+transformers==4.38.0
+datasets==2.18.0
+
+# Audio (if needed)
+pydub==0.25.1
+librosa==0.10.1
+
+# API
+fastapi==0.110.0
+uvicorn==0.27.0
