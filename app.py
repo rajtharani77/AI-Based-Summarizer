@@ -49,7 +49,7 @@ if uploaded_file is not None:
 
         # Summarization
         st.info("Summarizing...")
-        summary = summarize_text(transcript, HF_API_TOKEN)
+        summary = summarize_text(transcript)
         logger.info("Summary generated")
         st.success("Summary complete.")
         
@@ -58,7 +58,7 @@ if uploaded_file is not None:
 
         # CRM Extraction
         st.info("Extracting CRM...")
-        crm = extract_crm_structured(summary, HF_API_TOKEN)
+        crm = extract_crm_structured(summary)
         logger.info(f"CRM data extracted: {len(crm.get('actionItems', []))} action items")
         st.success("CRM Extraction complete.")
         
