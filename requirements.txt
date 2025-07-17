@@ -1,16 +1,13 @@
-# Core frameworks
+# Streamlit UI
 streamlit==1.32.2
-fastapi==0.110.0
-uvicorn==0.29.0
 
-# Whisper (audio transcription)
+# Whisper (local transcription)
 openai-whisper>=20230314
 ffmpeg-python>=0.2.0
 
-# Transformers & model runtime
-transformers>=4.30.0
-torch>=2.0.0
-sentencepiece>=0.1.98
+# HF Inference via requests
+requests>=2.31.0
 
-# (Optional) For JSON handling, HTTP requests, etc.
-# requests==2.31.0
+# (Optional) If you still have FastAPI endpoints
+fastapi==0.110.0
+uvicorn==0.29.0
