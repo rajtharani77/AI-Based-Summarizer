@@ -40,7 +40,7 @@ if uploaded_file is not None:
 
         # Transcription
         st.info("Transcribing...")
-        transcript = transcribe_audio(tmp_path, HF_API_TOKEN)
+        transcript = transcribe_audio(tmp_path)
         logger.info(f"Transcript length: {len(transcript)} characters")
         st.success("Transcription complete.")
         
