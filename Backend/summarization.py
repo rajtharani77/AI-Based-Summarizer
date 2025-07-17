@@ -1,6 +1,6 @@
 # Backend/summarization.py
 import requests
-from .api_utils import get_hf_token
+from .hf_utils import get_hf_token
 
 API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
