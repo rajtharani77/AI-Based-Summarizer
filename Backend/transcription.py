@@ -12,6 +12,5 @@ def transcribe_audio(file_path: str) -> str:
     out = client.automatic_speech_recognition(
         file_path,
         model="openai/whisper-large-v3",
-        options={"use_gpu": False}    # or True if your plan allows
     )
     return out["text"]
