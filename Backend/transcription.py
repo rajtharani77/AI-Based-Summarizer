@@ -1,16 +1,13 @@
-# transcription.py
-from huggingface_hub import InferenceClient
+# Backend/transcription.py
+from huggingface_hub import InferenceApi
 from .hf_utils import get_hf_token
 
-client = InferenceClient(api_key=get_hf_token())
+# point directly at the repo (and it always uses HF Inference)
+api = InferenceApi(repo_id="openai/whisper-large-v3", token=get_hf_token())
 
 def transcribe_audio(file_path: str) -> str:
-    """
-    Uses the HF InferenceClient. Automatically picks a working 
-    whisper endpoint under the hood.
-    """
-    out = client.automatic_speech_recognition(
-        file_path,
-        model="openai/whisper-large-v3",
-    )
-    return out["text"]
+    with open(file_path, "rb") as f:
+        audio_bytes = f.read()
+    # returns a dict with {"text": "..."}
+    result = api(inputs=audio_bytes)
+    return result.get("text", "")
