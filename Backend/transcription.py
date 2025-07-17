@@ -1,35 +1,36 @@
 # Backend/transcription.py
 
 import time
-from huggingface_hub import InferenceApi
+from huggingface_hub import InferenceClient
 from .hf_utils import get_hf_token
 
-# Instantiate the low‑level InferenceApi client pointing to the Whisper model
-api = InferenceApi(
-    repo_id="openai/whisper-large-v3",
-    token=get_hf_token()
-)
+# Pin to HF‑Inference so we hit the correct ASR endpoint
+client = InferenceClient(provider="hf-inference", api_key=get_hf_token())
 
 def transcribe_audio(file_path: str, max_retries: int = 3) -> str:
     """
-    Transcribe an audio file via Hugging Face InferenceApi (Whisper).
-    Automatically retries on transient errors.
+    Transcribe an audio file via Whisper (openai/whisper-large-v3).
+    Retries on transient errors (model loading, network hickups).
+    Returns the full transcript as a single string.
     """
     backoff = 1
     for attempt in range(1, max_retries + 1):
         try:
-            # Read raw bytes
-            with open(file_path, "rb") as f:
-                audio_bytes = f.read()
-
-            # Send as binary body (data=), not JSON
-            result = api(data=audio_bytes)
-
-            # Whisper returns {"text": "..."}
+            # automatic_speech_recognition streams the file and
+            # sets the correct Content-Type for you.
+            result = client.automatic_speech_recognition(
+                file_path,
+                model="openai/whisper-large-v3"
+            )
             return result.get("text", "").strip()
 
         except Exception as e:
+            # On final failure, surface the error
             if attempt == max_retries:
-                raise RuntimeError(f"Transcription failed after {attempt} attempts: {e}")
+                raise RuntimeError(
+                    f"Transcription failed after {attempt} attempts: {e}"
+                ) from e
+
+            # Otherwise, wait and retry
             time.sleep(backoff)
             backoff *= 2
