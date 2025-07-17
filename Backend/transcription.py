@@ -9,7 +9,7 @@ def transcribe_audio(file_path: str, api_token: str):
     
     try:
         with open(file_path, "rb") as f:
-            response = requests.post(API_URL, headers=headers, data=f, timeout=60)
+            response = requests.post(API_URL, headers=headers, data=f, timeout=300)
         response.raise_for_status()
         return response.json().get("text", "")
     
