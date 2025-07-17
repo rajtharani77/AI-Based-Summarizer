@@ -3,6 +3,7 @@ import sys
 import os
 import tempfile
 import streamlit as st
+
 from Backend.transcription import transcribe_audio
 from Backend.summarization import summarize_text
 from Backend.extraction import extract_crm_structured
@@ -26,31 +27,35 @@ uploaded = st.file_uploader(
     help="Limit 200MB per file • MP3, MP4"
 )
 
-if uploaded is not None:
+if uploaded:
+    tmp_path = None
     try:
-        # Save to temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+        # Save upload to a temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded.name)[1]) as tmp:
             tmp.write(uploaded.read())
             tmp_path = tmp.name
 
+        # 1) Transcription
         logger.info(f"Transcribing {tmp_path}")
-        st.info("Transcribing...")
+        st.info("Transcribing…")
         transcript = transcribe_audio(tmp_path)
         st.success("Transcription complete.")
 
         with st.expander("View Transcript"):
             st.write(transcript)
 
+        # 2) Summarization
         logger.info("Summarizing")
-        st.info("Summarizing...")
+        st.info("Summarizing…")
         summary = summarize_text(transcript)
         st.success("Summary complete.")
 
         st.write("### Summary")
         st.write(summary)
 
+        # 3) CRM Extraction
         logger.info("Extracting CRM data")
-        st.info("Extracting CRM...")
+        st.info("Extracting CRM…")
         crm = extract_crm_structured(summary)
         st.success("CRM Extraction complete.")
 
@@ -60,7 +65,13 @@ if uploaded is not None:
     except Exception as e:
         logger.error(f"Error in pipeline: {e}", exc_info=True)
         st.error(f"Error: {e}")
+
     finally:
-        if 'tmp_path' in locals() and os.path.exists(tmp_path):
-            os.remove(tmp_path)
-            logger.info("Removed temp file")
+        # Clean up temp file
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+                logger.info(f"Removed temp file {tmp_path}")
+            except Exception:
+                logger.warning(f"Could not remove temp file {tmp_path}", exc_info=True)
+
