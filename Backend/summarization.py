@@ -1,18 +1,19 @@
+# summarization.py
+
+import os
 import requests
-import logging
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+load_dotenv()
+API_TOKEN = os.getenv("HF_API_TOKEN")
+if not API_TOKEN:
+    raise RuntimeError("HF_API_TOKEN not set in environment")
 
-def summarize_text(text: str, api_token: str):
-    API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
-    headers = {"Authorization": f"Bearer {api_token}"}
+API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
+
+def summarize_text(text: str) -> str:
     payload = {"inputs": text}
-    
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=300)
-        response.raise_for_status()
-        return response.json()[0]["generated_text"]
-    
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Summarization API error: {str(e)}")
-        raise RuntimeError("Summarization service unavailable") from e
+    resp = requests.post(API_URL, headers=HEADERS, json=payload, timeout=30)
+    resp.raise_for_status()
+    return resp.json()[0]["generated_text"]
