@@ -2,7 +2,7 @@
 
 import time
 import requests
-from .hf_utils import get_hf_token
+from .hf_utils import get_hf_token, get_together_token
 
 def transcribe_audio(file_path: str, max_retries: int = 3) -> str:
     """
@@ -13,7 +13,7 @@ def transcribe_audio(file_path: str, max_retries: int = 3) -> str:
     """
     # Attempt Together AI transcription
     try:
-        tog_token = get_hf_token("TOGETHER_API_KEY")
+        tog_token = get_together_token()
         api_url = "https://api.together.xyz/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {tog_token}"}
         files = {"file": (file_path, open(file_path, "rb"), "application/octet-stream")}
