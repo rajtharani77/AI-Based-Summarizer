@@ -1,14 +1,20 @@
-import requests
+# extraction.py
+
+import os
 import json
-import logging
+import requests
 from typing import Dict, Any
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+load_dotenv()
+API_TOKEN = os.getenv("HF_API_TOKEN")
+if not API_TOKEN:
+    raise RuntimeError("HF_API_TOKEN not set in environment")
 
-def extract_crm_structured(summary: str, api_token: str) -> Dict[str, Any]:
-    API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
-    headers = {"Authorization": f"Bearer {api_token}"}
-    
+API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
+
+def extract_crm_structured(summary: str) -> Dict[str, Any]:
     prompt = f"""Convert this meeting summary into structured JSON format:
 
 Required JSON structure:
@@ -30,35 +36,29 @@ Meeting Summary:
 {summary}
 
 Output MUST follow these rules:
-1. Strictly valid JSON format
-2. No additional text before/after JSON
-3. Missing fields should be empty arrays/objects
-4. Escape all special characters properly
+1. Strictly valid JSON
+2. No extra text around the JSON
+3. Missing fields → empty arrays/objects
+4. Properly escape special characters
 """
-
     try:
-        response = requests.post(
+        resp = requests.post(
             API_URL,
-            headers=headers,
+            headers=HEADERS,
             json={"inputs": prompt},
-            timeout=90
+            timeout=30
         )
-        response.raise_for_status()
-        
-        output = response.json()[0]["generated_text"].strip()
-        json_start = output.find('{')
-        json_end = output.rfind('}') + 1
-        json_str = output[json_start:json_end]
-        
-        return json.loads(json_str)
-        
-    except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError) as e:
-        logger.error(f"CRM extraction error: {str(e)}")
+        resp.raise_for_status()
+        out = resp.json()[0]["generated_text"].strip()
+        start, end = out.find("{"), out.rfind("}") + 1
+        return json.loads(out[start:end])
+
+    except Exception:
         return create_fallback_response(summary)
 
 def create_fallback_response(summary: str) -> Dict[str, Any]:
     return {
-        "account": {"Name": "Error"},
+        "account": {"Name": "ParseError"},
         "contacts": [],
         "meeting": {
             "Summary": summary,
