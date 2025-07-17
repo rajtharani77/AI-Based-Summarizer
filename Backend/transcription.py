@@ -82,4 +82,4 @@ def transcribe_audio(
                 pass
 
     # Join with double‑newline so sentences from different chunks don’t run together
-    return "\n\n".join(transcript)
+    return "\n\n".join(transcript_part)
