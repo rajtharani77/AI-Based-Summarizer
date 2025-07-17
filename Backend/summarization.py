@@ -6,14 +6,14 @@ API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
 def summarize_text(text: str) -> str:
     """
-    Summarize via HF’s flan-t5-base.
+    Summarize text via HF’s flan-t5-base endpoint.
     """
     headers = {
         "Authorization": f"Bearer {get_hf_token()}",
         "Content-Type": "application/json"
     }
     prompt = (
-        "Provide a concise summary of this meeting transcript (one paragraph):\n\n"
+        "Please provide a concise summary of this meeting transcript:\n\n"
         f"{text}"
     )
     payload = {
@@ -24,8 +24,6 @@ def summarize_text(text: str) -> str:
             "do_sample": False
         }
     }
-
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=120)
     resp.raise_for_status()
-    data = resp.json()
-    return data[0]["generated_text"].strip()
+    return resp.json()[0]["generated_text"].strip()
