@@ -7,8 +7,6 @@ import streamlit as st
 from Backend.transcription import transcribe_audio
 from Backend.summarization import summarize_text
 from Backend.extraction import extract_crm_structured
-
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
