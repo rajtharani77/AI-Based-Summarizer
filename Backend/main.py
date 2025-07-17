@@ -1,12 +1,11 @@
-# main.py
-import os
+# Backend/main.py
+import os, traceback
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
-import traceback
 
-from transcription import transcribe_audio
-from summarization import summarize_text
-from extraction import extract_crm_structured
+from Backend.transcription import transcribe_audio
+from Backend.summarization import summarize_text
+from Backend.extraction import extract_crm_structured
 
 app = FastAPI()
 
