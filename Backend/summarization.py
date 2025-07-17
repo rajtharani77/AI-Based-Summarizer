@@ -13,11 +13,13 @@ def summarize_text(text: str) -> str:
         f"{text}"
     )
 
-    # <-- replace text_to_text with text_generation -->
+    # Huggingface-hub v0.16+: the text_generation call wants the prompt as `prompt=...`
     generations = client.text_generation(
         model="facebook/bart-large-cnn",
-        inputs=prompt,
+        prompt=prompt,
         parameters={"max_new_tokens": 256, "temperature": 0.3}
     )
+
+    # Pull out the generated text from the first item
     return generations[0].generated_text.strip()
 
