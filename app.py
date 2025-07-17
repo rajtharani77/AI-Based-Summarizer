@@ -3,9 +3,9 @@ import sys
 import os
 import tempfile
 import streamlit as st
-from transcription import transcribe_audio
-from summarization import summarize_text
-from extraction import extract_crm_structured
+from Backend.transcription import transcribe_audio
+from Backend.summarization import summarize_text
+from Backend.extraction import extract_crm_structured
 
 # Configure logging
 logging.basicConfig(
