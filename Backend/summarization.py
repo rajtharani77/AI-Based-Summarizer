@@ -1,25 +1,23 @@
-from huggingface_hub import InferenceClient
-from .hf_utils import get_hf_token
+# Backend/summarization.py
+from transformers import pipeline
 
-# Initialize once
-client = InferenceClient(provider="hf-inference", api_key=get_hf_token())
+# Load once at import time
+_summarizer = pipeline(
+    "summarization",
+    model="facebook/bart-large-cnn",
+    device=-1,             # CPU; set to GPU ID if available
+)
 
 def summarize_text(text: str) -> str:
     """
-    Summarize text using a robust summarization model.
+    Summarize the meeting transcript using a local BART model.
     """
-    prompt = (
-        "Please provide a concise summary of the following meeting transcript:\n\n"
-        f"{text}"
+    # The model max input length is ~1024 tokens; for longer transcripts you
+    # may want to chunk+summarize iteratively.
+    summary_outputs = _summarizer(
+        text,
+        max_length=150,     # adjust to taste
+        min_length=40,
+        do_sample=False
     )
-
-    # Huggingface-hub v0.16+: the text_generation call wants the prompt as `prompt=...`
-    generations = client.text_generation(
-        model="facebook/bart-large-cnn",
-        prompt=prompt,
-        parameters={"max_new_tokens": 256, "temperature": 0.3}
-    )
-
-    # Pull out the generated text from the first item
-    return generations[0].generated_text.strip()
-
+    return summary_outputs[0]["summary_text"].strip()
