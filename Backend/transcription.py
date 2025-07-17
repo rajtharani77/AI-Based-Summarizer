@@ -1,6 +1,6 @@
 import time
 import requests
-from Backend.api_utils import get_hf_token
+from .hf_utils import get_hf_token
 
 # Public, free Whisper endpoint
 API_URL = "https://api-inference.huggingface.co/models/openai/whisper-small"
