@@ -9,7 +9,7 @@ def summarize_text(text: str, api_token: str):
     payload = {"inputs": text}
     
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=300)
         response.raise_for_status()
         return response.json()[0]["generated_text"]
     
