@@ -3,6 +3,7 @@ from typing import Dict, Any
 from huggingface_hub import InferenceClient
 from .hf_utils import get_hf_token
 
+# Initialize once
 client = InferenceClient(provider="hf-inference", api_key=get_hf_token())
 
 def extract_crm_structured(summary: str) -> Dict[str, Any]:
@@ -26,12 +27,16 @@ def extract_crm_structured(summary: str) -> Dict[str, Any]:
 Meeting Summary:
 {summary}
 """
-    out = client.text_to_text(
-        inputs=prompt,
+
+    # <-- replace text_to_text with text_generation -->
+    generations = client.text_generation(
         model="google/flan-t5-large",
+        inputs=prompt,
         parameters={"max_new_tokens": 512, "temperature": 0}
     )
-    text = out.get("generated_text", "").strip()
+    # Grab the first (and only) generation
+    text = generations[0].generated_text.strip()
+
     # Extract only the JSON block
     start, end = text.find("{"), text.rfind("}") + 1
     try:
