@@ -1,10 +1,7 @@
-# Backend/summarization.py
 import logging
 from transformers import pipeline
 
 logger = logging.getLogger(__name__)
-
-# Local summarization pipeline
 _summarizer = pipeline(
     task="summarization",
     model="facebook/bart-large-cnn"
@@ -21,21 +18,16 @@ def summarize_text(text: str) -> str:
     except Exception as e:
         logger.error(f"Local summarization exception: {e}")
         return ""
-
-# Backend/extraction.py
 import json
 import logging
 from transformers import pipeline
 
 logger = logging.getLogger(__name__)
-
-# Local extraction pipeline (text-to-text)
 _extractor = pipeline(
     task="text2text-generation",
     model="google/flan-t5-small"
 )
 
-# CRM schema template for reference
 _CRM_SCHEMA = {
     "account": {"Name": ""},
     "contacts": [{"FullName": "", "Role": "", "Email": ""}],
@@ -60,14 +52,12 @@ def extract_crm_structured(summary: str) -> dict:
     try:
         outputs = _extractor(prompt, max_length=512)
         text = outputs[0].get("generated_text", "")
-        # Attempt to find the JSON substring
         start = text.find("{")
         end = text.rfind("}") + 1
         json_str = text[start:end]
         return json.loads(json_str)
     except Exception as e:
         logger.error(f"Local extraction exception: {e}")
-        # Fallback: minimal schema with summary
         return {
             "account": {"Name": "ParseError"},
             "contacts": [],
