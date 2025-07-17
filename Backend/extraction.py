@@ -1,24 +1,13 @@
 # extraction.py
-import os, json, requests
+import json
 from typing import Dict, Any
+from huggingface_hub import InferenceClient
+from hf_utils import get_hf_token
 
-# load HF_API_TOKEN
-try:
-    from streamlit import secrets
-    HF_API_TOKEN = secrets["HF_API_TOKEN"]
-except Exception:
-    HF_API_TOKEN = os.getenv("HF_API_TOKEN")
-
-if not HF_API_TOKEN:
-    raise RuntimeError("HF_API_TOKEN not set")
-
-API_URL = "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct"
-HEADERS = {"Authorization": f"Bearer {HF_API_TOKEN}"}
+client = InferenceClient(api_key=get_hf_token())
 
 def extract_crm_structured(summary: str) -> Dict[str, Any]:
-    prompt = f"""
-Convert the meeting summary below into strict JSON.  
-Use exactly this schema (nothing else):
+    prompt = f"""Convert this meeting summary into JSON, using exactly this schema (no extra text):
 
 {{
   "account": {{"Name": ""}},
@@ -35,15 +24,13 @@ Use exactly this schema (nothing else):
 Meeting Summary:
 {summary}
 """
-    payload = {
-        "inputs": prompt,
-        "parameters": {"max_new_tokens": 512, "temperature": 0},
-        "options": {"wait_for_model": True}
-    }
-    resp = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-    resp.raise_for_status()
-    text = resp.json()[0]["generated_text"].strip()
-    # extract JSON block
+    out = client.text_to_text(
+        inputs=prompt,
+        model="google/flan-t5-large",
+        parameters={"max_new_tokens": 512, "temperature": 0},
+    )
+    text = out["generated_text"].strip()
+    # Extract JSON block
     start, end = text.find("{"), text.rfind("}") + 1
     try:
         return json.loads(text[start:end])
