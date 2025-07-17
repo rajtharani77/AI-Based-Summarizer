@@ -2,7 +2,7 @@
 import json
 import requests
 from typing import Dict, Any
-from .api_utils import get_hf_token
+from .hf_utils import get_hf_token
 
 API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
 
