@@ -20,8 +20,6 @@ CRM_SCHEMA = {
     },
     "actionItems": [{"Description": "", "DueDate": "", "AssignedTo": ""}]
 }
-
-
 def extract_crm_structured(summary: str, max_retries: int = 3) -> dict:
     schema_str = json.dumps(CRM_SCHEMA, indent=2)
     prompt = (
@@ -43,7 +41,6 @@ def extract_crm_structured(summary: str, max_retries: int = 3) -> dict:
         "temperature": 0.0,
         "stream": False
     }
-
     backoff = 1
     for attempt in range(max_retries):
         resp = requests.post(API_URL, headers=headers, json=payload, timeout=120)
@@ -53,7 +50,6 @@ def extract_crm_structured(summary: str, max_retries: int = 3) -> dict:
         resp.raise_for_status()
 
         content = resp.json()["choices"][0]["message"]["content"].strip()
-        # Extract JSON
         start = content.find("{")
         end = content.rfind("}") + 1
         raw_json = content[start:end]
