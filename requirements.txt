@@ -1,11 +1,16 @@
+# Core frameworks
 streamlit==1.32.2
 fastapi==0.110.0
 uvicorn==0.29.0
-requests==2.31.0
-huggingface-hub>=0.16.4
 
+# Whisper (audio transcription)
+openai-whisper>=20230314
+ffmpeg-python>=0.2.0
 
-# Remove unused packages:
-# - python-dotenv (replaced by Streamlit secrets)
-# - fastapi, uvicorn (not needed for Streamlit app)
-# - datasets (not used)
+# Transformers & model runtime
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.98
+
+# (Optional) For JSON handling, HTTP requests, etc.
+# requests==2.31.0
