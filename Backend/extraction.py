@@ -1,48 +1,50 @@
+# Backend/extraction.py
 import json
-from typing import Dict, Any
-from huggingface_hub import InferenceClient
-from .hf_utils import get_hf_token
+from transformers import pipeline
 
-# Initialize once
-client = InferenceClient(provider="hf-inference", api_key=get_hf_token())
+# Load once at import time
+_extractor = pipeline(
+    "text2text-generation",
+    model="google/flan-t5-large",
+    device=-1,             # CPU; set to GPU ID if available
+)
 
-def extract_crm_structured(summary: str) -> Dict[str, Any]:
+def extract_crm_structured(summary: str) -> dict:
     """
-    Convert a meeting summary into a strict JSON CRM schema.
+    Convert a meeting summary into strict JSON CRM schema.
     """
-    prompt = f"""Convert the meeting summary below into strict JSON using exactly this schema (no extra text):
+    schema = {
+        "account": {"Name": ""},
+        "contacts": [{"FullName": "", "Role": "", "Email": ""}],
+        "meeting": {
+            "Summary": "",
+            "PainPoints": ["", ""],
+            "Objections": ["", ""],
+            "Resolutions": ["", ""]
+        },
+        "actionItems": [{"Description": "", "DueDate": "", "AssignedTo": ""}]
+    }
 
-{{
-  "account": {{"Name": ""}},
-  "contacts": [{{"FullName": "", "Role": "", "Email": ""}}],
-  "meeting": {{
-    "Summary": "",
-    "PainPoints": ["", ""],
-    "Objections": ["", ""],
-    "Resolutions": ["", ""]
-  }},
-  "actionItems": [{{"Description": "", "DueDate": "", "AssignedTo": ""}}]
-}}
-
-Meeting Summary:
-{summary}
-"""
-
-    # <-- replace text_to_text with text_generation -->
-    generations = client.text_generation(
-        model="google/flan-t5-large",
-        inputs=prompt,
-        parameters={"max_new_tokens": 512, "temperature": 0}
+    prompt = (
+        f"Convert the meeting summary below into JSON exactly matching this schema (no extra keys):\n\n"
+        f"{json.dumps(schema, indent=2)}\n\n"
+        f"Meeting Summary:\n{summary}"
     )
-    # Grab the first (and only) generation
-    text = generations[0].generated_text.strip()
 
-    # Extract only the JSON block
+    outputs = _extractor(
+        prompt,
+        max_length=512,
+        temperature=0.0,
+        do_sample=False
+    )
+    text = outputs[0]["generated_text"].strip()
+
+    # Extract JSON substring
     start, end = text.find("{"), text.rfind("}") + 1
     try:
         return json.loads(text[start:end])
     except json.JSONDecodeError:
-        # Fallback to empty structure on parse error
+        # Fallback on parse error
         return {
             "account": {"Name": "ParseError"},
             "contacts": [],
