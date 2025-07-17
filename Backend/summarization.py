@@ -1,4 +1,3 @@
-# Backend/summarization.py
 import requests
 from .hf_utils import get_hf_token
 
@@ -18,12 +17,9 @@ def summarize_text(text: str) -> str:
     )
     payload = {
         "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 150,
-            "temperature": 0.3,
-            "do_sample": False
-        }
+        "parameters": {"max_new_tokens": 150, "temperature": 0.3, "do_sample": False}
     }
+
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=120)
     resp.raise_for_status()
     return resp.json()[0]["generated_text"].strip()
