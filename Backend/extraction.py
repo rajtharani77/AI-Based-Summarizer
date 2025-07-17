@@ -8,7 +8,7 @@ API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
 
 def extract_crm_structured(summary: str) -> Dict[str, Any]:
     """
-    Convert summary → JSON CRM schema via HF.
+    Convert a meeting summary into strict JSON CRM schema.
     """
     schema = {
       "account": {"Name": ""},
@@ -21,10 +21,8 @@ def extract_crm_structured(summary: str) -> Dict[str, Any]:
       },
       "actionItems": [{"Description": "", "DueDate": "", "AssignedTo": ""}]
     }
-
     prompt = (
-        "Convert the meeting summary below into JSON exactly matching this schema "
-        "(no extra keys):\n\n"
+        "Convert the meeting summary below into JSON exactly matching this schema (no extra keys):\n\n"
         f"{json.dumps(schema, indent=2)}\n\n"
         f"Meeting Summary:\n{summary}"
     )
@@ -40,13 +38,10 @@ def extract_crm_structured(summary: str) -> Dict[str, Any]:
             "do_sample": False
         }
     }
-
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=120)
     resp.raise_for_status()
-    data = resp.json()
-    text = data[0]["generated_text"].strip()
+    text = resp.json()[0]["generated_text"].strip()
 
-    # extract JSON substring
     start, end = text.find("{"), text.rfind("}") + 1
     try:
         return json.loads(text[start:end])
