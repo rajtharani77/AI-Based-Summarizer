@@ -1,5 +1,4 @@
 # Backend/transcription.py
-
 import time
 import requests
 from .hf_utils import get_hf_token, get_together_token
@@ -57,3 +56,4 @@ def transcribe_audio(file_path: str, max_retries: int = 3) -> str:
         return resp.json().get("text", "").strip()
 
     raise RuntimeError("Transcription failed via both Together AI and HF ASR")
+
