@@ -20,6 +20,13 @@ logger = logging.getLogger("MeetingProcessor")
 
 st.title("AI Meeting Summarizer & CRM Extractor")
 
+# Get API token from Streamlit secrets
+try:
+    HF_API_TOKEN = st.secrets["HF_API_TOKEN"]
+except KeyError:
+    st.error("Hugging Face API token not found in secrets")
+    st.stop()
+
 uploaded_file = st.file_uploader("Upload meeting audio (mp3/mp4)", type=["mp3", "mp4"])
 
 if uploaded_file is not None:
@@ -33,7 +40,7 @@ if uploaded_file is not None:
 
         # Transcription
         st.info("Transcribing...")
-        transcript = transcribe_audio(tmp_path)
+        transcript = transcribe_audio(tmp_path, HF_API_TOKEN)
         logger.info(f"Transcript length: {len(transcript)} characters")
         st.success("Transcription complete.")
         
@@ -42,7 +49,7 @@ if uploaded_file is not None:
 
         # Summarization
         st.info("Summarizing...")
-        summary = summarize_text(transcript)
+        summary = summarize_text(transcript, HF_API_TOKEN)
         logger.info("Summary generated")
         st.success("Summary complete.")
         
@@ -51,7 +58,7 @@ if uploaded_file is not None:
 
         # CRM Extraction
         st.info("Extracting CRM...")
-        crm = extract_crm_structured(summary)
+        crm = extract_crm_structured(summary, HF_API_TOKEN)
         logger.info(f"CRM data extracted: {len(crm.get('actionItems', []))} action items")
         st.success("CRM Extraction complete.")
         
