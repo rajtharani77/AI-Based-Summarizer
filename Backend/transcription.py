@@ -2,8 +2,8 @@
 import whisper
 import time
 
-# Choose model size: "tiny", "base", "small", "medium", "large"
-MODEL_NAME = "small"
+# Pick a small model so it runs on CPU in Streamlit Cloud
+MODEL_NAME = "base"
 _model = whisper.load_model(MODEL_NAME)
 
 def transcribe_audio(file_path: str, max_retries: int = 1) -> str:
