@@ -1,37 +1,23 @@
 # Backend/summarization.py
-import os
 import time
 import logging
 import requests
-import streamlit as st
 from .hf_utils import get_together_token, get_hf_token
 
 logger = logging.getLogger(__name__)
 
-# Load endpoints from environment or Streamlit secrets
-TOGETHER_URL = os.getenv("TOGETHER_URL") or st.secrets.get("TOGETHER_URL")
-HF_URL       = os.getenv("HF_URL")       or st.secrets.get("HF_URL")
-
-# Healthcheck for endpoints at startup
-def _healthcheck(name: str, url: str, token_getter, token_env: str):
-    try:
-        token = token_getter() if token_getter else (os.getenv(token_env) or st.secrets.get(token_env))
-        resp = requests.head(url, headers={"Authorization": f"Bearer {token}"}, timeout=5)
-        resp.raise_for_status()
-        logger.info(f"[Health] {name} OK @ {url}")
-    except Exception as e:
-        logger.error(f"[Health] {name} FAILED @ {url}: {e}")
-
-# Run healthchecks on import/startup
-_healthcheck("Together Summarizer", TOGETHER_URL, get_together_token, "TOGETHER_API_KEY")
-_healthcheck("HF Summarizer",       HF_URL,       get_hf_token,       "HUGGINGFACE_API_TOKEN")
+# Default endpoints (override via env/secrets if needed)
+TOGETHER_URL = "https://api.together.ai/v1/generation"
+HF_URL       = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 
 def summarize_text(text: str, max_retries: int = 3) -> str:
     """
-    Summarize via Together API, fallback to Hugging Face.
+    Summarize via Together API; fallback to Hugging Face distilbart-cnn-12-6.
     """
     prompt = f"Please provide a concise summary of this meeting transcript:\n\n{text}"
-    tog_payload = {
+
+    # Together payload uses 'model' inside JSON
+    tog_body = {
         "model": "togethercomputer/RedPajama-INCITE-7B-Instruct-v1",
         "prompt": prompt,
         "maxTokens": 150,
@@ -44,37 +30,39 @@ def summarize_text(text: str, max_retries: int = 3) -> str:
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         backoff = 1
         for _ in range(max_retries):
-            resp = requests.post(TOGETHER_URL, headers=headers, json=tog_payload, timeout=120)
+            resp = requests.post(TOGETHER_URL, headers=headers, json=tog_body, timeout=120)
             if resp.status_code == 503:
-                logger.warning(f"[Together] model loading, retry in {backoff}s...")
+                logger.warning(f"[Together] loading, retry in {backoff}s...")
                 time.sleep(backoff)
                 backoff *= 2
                 continue
-            if resp.status_code != 200:
-                logger.error(f"[Together] {resp.status_code}: {resp.text}")
-                break
-            return resp.json()["choices"][0]["text"].strip()
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("choices", [{}])[0].get("text", "").strip()
+            logger.error(f"[Together] error {resp.status_code}: {resp.text}")
+            break
     except Exception:
-        logger.exception("[Together] summarization error")
+        logger.exception("[Together] summarization exception")
 
     # 2) HF fallback
-    hf_payload = {"inputs": prompt, "parameters": {"max_new_tokens": 150, "temperature": 0.3}}
+    hf_body = {"inputs": prompt, "parameters": {"max_new_tokens": 150, "temperature": 0.3}}
     try:
         token = get_hf_token()
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         backoff = 1
         for _ in range(max_retries):
-            resp = requests.post(HF_URL, headers=headers, json=hf_payload, timeout=120)
+            resp = requests.post(HF_URL, headers=headers, json=hf_body, timeout=120)
             if resp.status_code == 503:
-                logger.warning(f"[HF] model loading, retry in {backoff}s...")
+                logger.warning(f"[HF] loading, retry in {backoff}s...")
                 time.sleep(backoff)
                 backoff *= 2
                 continue
-            if resp.status_code != 200:
-                logger.error(f"[HF] {resp.status_code}: {resp.text}")
-                break
-            return resp.json()[0]["generated_text"].strip()
+            if resp.status_code == 200:
+                return resp.json()[0].get("generated_text", "").strip()
+            logger.error(f"[HF] error {resp.status_code}: {resp.text}")
+            break
     except Exception:
-        logger.exception("[HF] summarization error")
+        logger.exception("[HF] summarization exception")
 
-    raise RuntimeError("Both Together and HF summarization failed. See logs for details.")
+    # If both fail, return a fallback message or empty string
+    return "" 
