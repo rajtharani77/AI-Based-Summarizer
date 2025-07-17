@@ -1,89 +1,120 @@
-#AI Meeting Summarizer & CRM Extractor
+AI Meeting Summarizer & CRM Extractor
 
-This project is an end-to-end AI-powered tool to transcribe meeting audio, generate concise summaries, and extract structured CRM insights — all in one streamlined app.
+This project is a complete AI-powered pipeline that:
 
-📌 Features
+✅ Transcribes audio from Zoom, Google Meet, or Teams calls✅ Summarizes long transcripts into clear, actionable notes✅ Extracts structured CRM-ready JSON (accounts, contacts, pain points, objections, resolutions, action items)
 
-Audio Transcription: Upload your meeting recordings (MP3/MP4) and transcribe them automatically.
+📌 Key Features
 
-AI Summarization: Get clean, concise summaries using local transformer models — robust even when cloud endpoints fail.
+ASR Transcription: Upload .mp3 or .mp4 recordings — converts speech to text using Together’s Whisper or other ASR.
 
-CRM Data Extraction: Convert summaries into structured JSON CRM notes including account, contacts, pain points, objections, resolutions, and action items.
+AI Summarization: Uses Together’s /v1/chat/completions to produce crisp, bullet-point business summaries.
 
-Streamlit Interface: Run the entire pipeline in an easy-to-use web app.
+CRM Extraction: Uses Together’s /v1/chat/completions to generate strict, schema-matching JSON — robust enough for real CRM updates.
 
-🧩 How It Works
+Reliable Fallbacks: Local fallback possible using Hugging Face transformers if needed.
 
-Upload your meeting audio file (Max 200MB).
+Streamlit Frontend: Clean, simple web UI for uploads and results.
 
-Transcription: The audio is transcribed with Hugging Face or Together AI fallback.
+⚙️ Updated Tech Stack
 
-Summarization: The transcript is summarized locally with facebook/bart-large-cnn.
-
-CRM Extraction: The summary is turned into structured CRM JSON using google/flan-t5-small.
-
-⚙️ Tech Stack
-
-Python
+Python 3.9+
 
 Streamlit
 
-Transformers (Hugging Face)
+Together AI (/v1/chat/completions)
 
-Torch
+Hugging Face Transformers (optional local fallback)
+
+Torch + Torchaudio
 
 Requests
 
+✅ How It Works
+
+1️⃣ Upload meeting audio file (Max 200MB, mp3/mp4).
+
+2️⃣ Transcribe: Uses Whisper ASR via Together or Hugging Face.
+
+3️⃣ Summarize: Calls Together’s chat completions API with the full transcript to get a short, meaningful summary.
+
+4️⃣ Extract CRM: Sends the summary back to Together’s chat completions API with a system/user prompt instructing strict JSON output.
+
+5️⃣ Display: Streamlit shows transcript, summary, and the final CRM JSON.
+
+🗂️ API Endpoints Used
+
+POST https://api.together.xyz/v1/chat/completions
+
+Example model:
+
+"meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+
+You must pass your Together API key via st.secrets or os.environ as TOGETHER_API_KEY.
+
 🖼️ Screenshots
 
-1️⃣ Transcription Stage
+📄 Transcription View
 
+(Add your uploaded image)
 
+✏️ Summary View
 
-2️⃣ Summary Stage
+(Add your uploaded image)
 
+📊 CRM JSON Extraction
 
+(Add your uploaded image)
 
-3️⃣ CRM Extraction Stage
+⚡ Example Schema
 
+{
+  "account": {"Name": ""},
+  "contacts": [{"FullName": "", "Role": "", "Email": ""}],
+  "meeting": {
+    "Summary": "",
+    "PainPoints": ["", ""],
+    "Objections": ["", ""],
+    "Resolutions": ["", ""]
+  },
+  "actionItems": [{"Description": "", "DueDate": "", "AssignedTo": ""}]
+}
 
+🚀 Quickstart
 
-✅ Current Status
+# Clone
+$ git clone <repo-url>
+$ cd AI-Meeting-CRM
 
-The system now uses local fallback models for both summarization and CRM extraction. This ensures robust results even if remote APIs fail.
-
-🚀 Setup & Run
-
-# Clone the repo
-$ git clone <your-repo-url>
-$ cd AI-Based-Summarizer
-
-# Install dependencies
+# Install
 $ pip install -r requirements.txt
 
-# Run the app
-$ streamlit run app.py
+# Streamlit link
+https://ai-based-summarizer-4dftwcvy5urenxiio82u6s.streamlit.app/
 
-📂 Requirements
+📋 requirements.txt
 
-Ensure your requirements.txt includes:
+streamlit>=1.32.0
+transformers>=4.34.0
+torch>=2.0.0
+torchaudio>=2.0.0
+soundfile>=0.12.1
+requests>=2.31.0
 
-streamlit
-transformers
-torch
-requests
-soundfile
+💡 Tips
 
-🏷️ Notes
+✅ Make sure your Together API key is valid and the model slug exists.
 
-Uses local fallback models to ensure no vendor lock or API limits block functionality.
+✅ Together chat works best with system + user roles.
 
-Use .env or Streamlit secrets to configure optional remote endpoints.
+✅ Always instruct the model to return valid JSON only.
 
-✨ License
+🪪 License
 
-MIT License.
+MIT
 
-🤝 Contribution
+🤝 Contributing
 
-Feel free to open issues or pull requests to improve this tool!
+PRs welcome! Report issues and improvements on GitHub.
+
+Made with 🤝 Together AI + Hugging Face + Streamlit.
