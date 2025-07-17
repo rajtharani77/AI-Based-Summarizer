@@ -1,6 +1,7 @@
 from huggingface_hub import InferenceClient
 from .hf_utils import get_hf_token
 
+# Initialize once
 client = InferenceClient(provider="hf-inference", api_key=get_hf_token())
 
 def summarize_text(text: str) -> str:
@@ -11,9 +12,12 @@ def summarize_text(text: str) -> str:
         "Please provide a concise summary of the following meeting transcript:\n\n"
         f"{text}"
     )
-    out = client.text_to_text(
-        inputs=prompt,
+
+    # <-- replace text_to_text with text_generation -->
+    generations = client.text_generation(
         model="facebook/bart-large-cnn",
+        inputs=prompt,
         parameters={"max_new_tokens": 256, "temperature": 0.3}
     )
-    return out.get("generated_text", "").strip()
+    return generations[0].generated_text.strip()
+
